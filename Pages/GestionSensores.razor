@@ -1,0 +1,228 @@
+﻿@page "/sensores"
+@using AgroTech.Models
+@using AgroTech.Services
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Panel de Infraestructura - AgroTech</h2>
+        <span class="badge bg-secondary">Módulo de Monitoreo</span>
+    </div>
+
+    @if (!string.IsNullOrEmpty(mensajeError))
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <strong>Error del Sistema:</strong> @mensajeError
+            <button type="button" class="btn-close" @onclick="() => mensajeError = null" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card my-4 shadow">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">@(sensorForm.Id == 0 ? " Registrar Nuevo Sensor de Campo" : " Modificar Configuración del Sensor")</h5>
+        </div>
+        <div class="card-body bg-light">
+            <EditForm Model="sensorForm" OnValidSubmit="GuardarSensor">
+                <DataAnnotationsValidator />
+
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Nombre del Dispositivo:</label>
+                        <InputText @bind-Value="sensorForm.Nombre" class="form-control" placeholder="Ej. Sensor_Humedad_A1" />
+                        <ValidationMessage For="() => sensorForm.Nombre" class="text-danger small" />
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Tipo de Variable:</label>
+                        <InputSelect @bind-Value="sensorForm.Tipo" class="form-select">
+                            <option value="">-- Seleccione --</option>
+                            <option value="Humedad">Humedad del Suelo (%)</option>
+                            <option value="Temperatura">Temperatura Ambiente (°C)</option>
+                            <option value="PH">Nivel de PH</option>
+                        </InputSelect>
+                        <ValidationMessage For="() => sensorForm.Tipo" class="text-danger small" />
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Zona / Ubicación:</label>
+                        <InputText @bind-Value="sensorForm.Ubicacion" class="form-control" placeholder="Ej. Invernadero Lote 4" />
+                        <ValidationMessage For="() => sensorForm.Ubicacion" class="text-danger small" />
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Calibración Inicial:</label>
+                        <InputNumber @bind-Value="sensorForm.ValorCalibracion" class="form-control" />
+                        <ValidationMessage For="() => sensorForm.ValorCalibracion" class="text-danger small" />
+                    </div>
+                </div>
+
+                <div class="mt-2">
+                    <button type="submit" class="btn btn-success px-4">Guardar en Base de Datos</button>
+                    @if (sensorForm.Id != 0)
+                    {
+                        <button type="button" class="btn btn-dark ms-2" @onclick="LimpiarFormulario">Cancelar Edición</button>
+                    }
+                </div>
+            </EditForm>
+        </div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0"> Inventario de Hardware Activo</h5>
+        </div>
+        <div class="card-body p-0">
+            @if (listaSensores == null)
+            {
+                <div class="p-4 text-center">
+                    <div class="spinner-border text-success" role="status"></div>
+                    <p class="mt-2 mb-0">Conectando con los servicios de AgroTech...</p>
+                </div>
+            }
+            else if (!listaSensores.Any())
+            {
+                <p class="p-4 text-center text-muted mb-0">No hay sensores registrados en este lote agrícola.</p>
+            }
+            else
+            {
+                <table class="table table-striped table-hover align-middle mb-0">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th class="ps-3">ID</th>
+                            <th>Nombre Técnico</th>
+                            <th>Métrica</th>
+                            <th>Ubicación Estación</th>
+                            <th>Calibración</th>
+                            <th class="text-center" style="width: 200px;">Acciones de Control</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var sensor in listaSensores)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold">@sensor.Id</td>
+                                <td>@sensor.Nombre</td>
+                                <td><span class="badge bg-primary">@sensor.Tipo</span></td>
+                                <td>@sensor.Ubicacion</td>
+                                <td>@sensor.ValorCalibracion %</td>
+                                <td class="text-center">
+                                    <button class="btn btn-warning btn-sm me-2" @onclick="() => SeleccionarParaEditar(sensor)">Editar</button>
+
+                                    @* Validación de Rol: Solo si es Admin ve el botón *@
+                                    @if (esAdmin)
+                                    {
+                                        <button class="btn btn-danger btn-sm"
+                                                @onclick="() => ConfirmarEliminar(sensor.Id)">
+                                            Eliminar
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-danger btn-sm"
+                                                disabled>
+                                            Solo Admin
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Sensor>? listaSensores;
+    private Sensor sensorForm = new();
+    private string? mensajeError;
+    private bool esAdmin = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ObtenerSensoresDelServidor();
+    }
+
+    private async Task ObtenerSensoresDelServidor()
+    {
+        try
+        {
+            mensajeError = null;
+            listaSensores = await Http.GetFromJsonAsync<List<Sensor>>("api/sensores");
+        }
+        catch (HttpRequestException ex)
+        {
+            mensajeError = "No se pudo sincronizar con la API de AgroTech. Compruebe que el servicio Backend esté encendido.";
+            Console.WriteLine($"[Excepción Controlada]: {ex.Message}");
+        }
+    }
+
+    private async Task GuardarSensor()
+    {
+        try
+        {
+            mensajeError = null;
+            if (sensorForm.Id == 0)
+            {
+                // Create
+                await Http.PostAsJsonAsync("api/sensores", sensorForm);
+            }
+            else
+            {
+                // Update
+                await Http.PutAsJsonAsync($"api/sensores/{sensorForm.Id}", sensorForm);
+            }
+
+            LimpiarFormulario();
+            await ObtenerSensoresDelServidor();
+        }
+        catch (Exception ex)
+        {
+            mensajeError = "Fallo crítico al intentar persistir los cambios en el servidor.";
+            Console.WriteLine(ex.Message);
+        }
+    }
+
+    private void SeleccionarParaEditar(Sensor sensor)
+    {
+        sensorForm = new Sensor
+        {
+            Id = sensor.Id,
+            Nombre = sensor.Nombre,
+            Tipo = sensor.Tipo,
+            Ubicacion = sensor.Ubicacion,
+            ValorCalibracion = sensor.ValorCalibracion
+        };
+    }
+
+    private async Task ConfirmarEliminar(int id)
+    {
+        bool confirmacionJs = await JS.InvokeAsync<bool>("confirm", "⚠️ ¿Seguro que deseas dar de baja este sensor del sistema?");
+        if (confirmacionJs)
+        {
+            try
+            {
+                mensajeError = null;
+                // Delete
+                var respuesta = await Http.DeleteAsync($"api/sensores/{id}");
+                if (respuesta.IsSuccessStatusCode)
+                {
+                    await ObtenerSensoresDelServidor();
+                }
+                else
+                {
+                    mensajeError = "El servidor denegó la eliminación del registro técnico.";
+                }
+            }
+            catch (Exception ex)
+            {
+                mensajeError = "Excepción al procesar la baja del hardware.";
+                Console.WriteLine(ex.Message);
+            }
+        }
+    }
+
+    private void LimpiarFormulario() => sensorForm = new();
+}

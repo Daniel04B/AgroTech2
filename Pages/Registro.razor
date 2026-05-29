@@ -1,90 +1,211 @@
 ﻿@page "/registro"
+
 @inject NavigationManager NavigationManager
 @inject AgricultorService AgricultorService
 
 <div class="d-flex align-items-center justify-content-center vh-100 bg-agrotech-gradient">
-    <div class="card border-0 shadow-lg rounded-4 p-4" style="width: 100%; max-width: 450px;">
+
+    <div class="card border-0 shadow-lg rounded-4 p-4"
+         style="width:100%; max-width:450px;">
 
         <div class="text-center mb-4">
+
             <div class="bg-success-subtle d-inline-block p-3 rounded-circle mb-3">
                 <i class="bi bi-person-plus text-success fs-1"></i>
             </div>
+
             <h2 class="fw-bold">Crear Cuenta</h2>
-            <p class="text-muted">Únete a Agrotech y optimiza tus sistemas de riego</p>
+
+            <p class="text-muted">
+                Únete a AgroTech y optimiza tus cultivos
+            </p>
+
         </div>
 
-        <EditForm Model="@agricultor" OnValidSubmit="HandleRegister">
+        <EditForm Model="@agricultor"
+                  OnValidSubmit="HandleRegister">
+
             <DataAnnotationsValidator />
+            <ValidationSummary />
 
             @if (!string.IsNullOrEmpty(errorMessage))
             {
-                <div class="alert alert-danger py-2 small mb-3">@errorMessage</div>
+                <div class="alert alert-danger py-2 small mb-3">
+                    @errorMessage
+                </div>
             }
 
             @if (isSuccess)
             {
-                <div class="alert alert-success py-2 small mb-3">
-                    <i class="bi bi-check-circle-fill me-1"></i> ¡Registro exitoso! Redirigiendo...
+                <div class="alert alert-success shadow-sm border-0 py-3 mb-3">
+
+                    <div class="d-flex align-items-center">
+
+                        <i class="bi bi-check-circle-fill fs-4 me-2"></i>
+
+                        <div>
+
+                            <strong>
+                                Usuario registrado correctamente
+                            </strong>
+
+                            <div class="small">
+                                Redirigiendo al inicio de sesión...
+                            </div>
+
+                        </div>
+
+                    </div>
+
                 </div>
             }
 
-            <div class="mb-3">
-                <label class="form-label small fw-bold">Nombre</label>
-                <InputText @bind-Value="agricultor.Nombre" class="form-control rounded-3" placeholder="Tu nombre" />
-                <ValidationMessage For="@(() => agricultor.Nombre)" class="text-danger small" />
-            </div>
+            <!-- NOMBRE -->
 
             <div class="mb-3">
-                <label class="form-label small fw-bold">Apellido (Opcional)</label>
-                <InputText @bind-Value="agricultor.Apellido" class="form-control rounded-3" placeholder="Tu apellido" />
-                <ValidationMessage For="@(() => agricultor.Apellido)" class="text-danger small" />
+
+                <label class="form-label fw-bold">
+                    Nombre
+                </label>
+
+                <InputText @bind-Value="agricultor.Nombre"
+                           class="form-control rounded-3"
+                           placeholder="Ingresa tu nombre" />
+
+                <ValidationMessage For="@(() => agricultor.Nombre)" />
+
             </div>
 
-            <div class="mb-3">
-                <label class="form-label small fw-bold">Usuario o Correo</label>
-                <InputText @bind-Value="agricultor.Usuario" class="form-control rounded-3" placeholder="ejemplo123" />
-                <ValidationMessage For="@(() => agricultor.Usuario)" class="text-danger small" />
-            </div>
+            <!-- APELLIDO -->
 
             <div class="mb-3">
-                <label class="form-label small fw-bold">Contraseña</label>
-                <InputText @bind-Value="agricultor.Contrasena" type="password" ... />
-                <ValidationMessage For="@(() => agricultor.Contrasena)" ... />
+
+                <label class="form-label fw-bold">
+                    Apellido
+                </label>
+
+                <InputText @bind-Value="agricultor.Apellido"
+                           class="form-control rounded-3"
+                           placeholder="Ingresa tu apellido" />
+
             </div>
+
+            <!-- USUARIO -->
+
+            <div class="mb-3">
+
+                <label class="form-label fw-bold">
+                    Usuario
+                </label>
+
+                <InputText @bind-Value="agricultor.Usuario"
+                           class="form-control rounded-3"
+                           placeholder="Ejemplo: juan123" />
+
+                <ValidationMessage For="@(() => agricultor.Usuario)" />
+
+            </div>
+
+            <!-- CONTRASEÑA -->
+
+            <div class="mb-3">
+
+                <label class="form-label fw-bold">
+                    Contraseña
+                </label>
+
+                <InputText @bind-Value="agricultor.Contrasena"
+                           type="password"
+                           class="form-control rounded-3"
+                           placeholder="••••••••" />
+
+                <ValidationMessage For="@(() => agricultor.Contrasena)" />
+
+            </div>
+
+            <!-- CONFIRMAR -->
+
+            <div class="mb-3">
+
+                <label class="form-label fw-bold">
+                    Confirmar Contraseña
+                </label>
+
+                <InputText @bind-Value="confirmPassword"
+                           type="password"
+                           class="form-control rounded-3"
+                           placeholder="••••••••" />
+
+            </div>
+
+            <!-- ROL -->
 
             <div class="mb-4">
-                <label class="form-label small fw-bold">Confirmar Contraseña</label>
-                <input @bind="confirmPassword" type="password" class="form-control rounded-3" placeholder="••••••••" />
+
+                <label class="form-label fw-bold">
+                    Rol del Usuario
+                </label>
+
+                <InputSelect @bind-Value="agricultor.Rol"
+                             class="form-select rounded-3">
+
+                    <option value="Usuario">Usuario</option>
+                    <option value="Admin">Administrador</option>
+
+                </InputSelect>
+
             </div>
 
-            <button type="submit" class="btn btn-success btn-lg w-100 rounded-3 shadow-sm" disabled="@isSuccess">
-                @if (isSuccess)
-                {
-                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden=\"true\"></span>
-                }
+            <!-- BOTON -->
+
+            <button type="submit"
+                    class="btn btn-success btn-lg w-100 rounded-3">
+
                 Registrarse
+
             </button>
+
         </EditForm>
 
         <div class="text-center mt-4">
+
             <p class="small text-muted">
-                ¿Ya tienes una cuenta?
-                <a href="/" class="text-success fw-bold text-decoration-none">Inicia sesión aquí</a>
+
+                ¿Ya tienes cuenta?
+
+                <a href="/"
+                   class="text-success fw-bold text-decoration-none">
+
+                    Inicia sesión
+
+                </a>
+
             </p>
+
         </div>
 
     </div>
+
 </div>
 
 @code {
-    private Agricultor agricultor = new();
+
+    private Agricultor agricultor = new()
+    {
+        Rol = "Usuario"
+    };
+
     private string confirmPassword = "";
+
     private string errorMessage = "";
+
     private bool isSuccess = false;
 
     private async Task HandleRegister()
     {
         errorMessage = "";
+
+        // VALIDAR PASSWORDS
 
         if (agricultor.Contrasena != confirmPassword)
         {
@@ -94,23 +215,45 @@
 
         try
         {
-            // El servicio devuelve null si no hubo errores en la API
-            var errorDeAPI = await AgricultorService.RegistrarAsync(agricultor);
+            var errorAPI =
+                await AgricultorService.RegistrarAsync(agricultor);
 
-            if (errorDeAPI == null)
+            // REGISTRO EXITOSO
+
+            if (errorAPI == null)
             {
                 isSuccess = true;
-                await Task.Delay(2000);
+
+                // MENSAJE VISUAL
+
+                errorMessage = "";
+
+                // LIMPIAR FORMULARIO
+
+                agricultor = new Agricultor()
+                {
+                    Rol = "Usuario"
+                };
+
+                confirmPassword = "";
+
+                StateHasChanged();
+
+                // ESPERAR 3 SEGUNDOS
+
+                await Task.Delay(3000);
+
                 NavigationManager.NavigateTo("/");
             }
             else
             {
-                errorMessage = errorDeAPI;
+                errorMessage = errorAPI;
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error al conectar con el servidor: {ex.Message}";
+            errorMessage =
+                $"Error al conectar con el servidor: {ex.Message}";
         }
     }
 }

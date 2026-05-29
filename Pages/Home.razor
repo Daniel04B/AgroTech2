@@ -50,7 +50,22 @@ else
         <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
             <div>
                 <h1 class="fw-bold text-dark mb-1">Panel Principal</h1>
-                <p class="text-muted mb-0">Bienvenido de vuelta, <span class="fw-bold text-success">@usuarioLogueado?.Nombre</span>. Monitoreo en tiempo real.</p>
+                <p class="text-muted mb-0">
+
+                    Bienvenido de vuelta,
+
+                    <span class="fw-bold text-success">
+                        @usuarioLogueado?.Nombre
+                    </span>
+
+                    <span class="badge bg-dark ms-2">
+
+                        Rol:
+                        @usuarioLogueado?.Rol
+
+                    </span>
+
+                </p>
             </div>
             <button @onclick="CerrarSesion" class="btn btn-outline-danger btn-sm rounded-3">
                 <i class="bi bi-box-arrow-right me-1"></i> Salir
@@ -217,6 +232,8 @@ else
     private string password = "";
     private string loginError = "";
     private Agricultor? usuarioLogueado;
+    private bool EsAdmin =>
+    usuarioLogueado?.Rol == "Admin";
 
     private List<Zona> zonas = new();
     private List<LecturaSensor> lecturas = new();
@@ -245,29 +262,107 @@ else
 
     private async Task IniciarSesion()
     {
-        loginError = "";
-        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        loginError = string.Empty;
+        errorMessage = string.Empty;
+
+        // ==========================
+        // VALIDACIONES BÁSICAS
+        // ==========================
+        if (string.IsNullOrWhiteSpace(username))
         {
-            loginError = "Por favor, llena todos los campos.";
+            loginError = "El usuario es obligatorio.";
             return;
         }
 
-        var resultado = await AgricultorService.LoginAsync(username, password);
-        if (resultado != null)
+        if (string.IsNullOrWhiteSpace(password))
         {
+            loginError = "La contraseña es obligatoria.";
+            return;
+        }
+
+        try
+        {
+            // ==========================
+            // LOGIN CONTRA LA API
+            // ==========================
+            var resultado = await AgricultorService.LoginAsync(
+                username.Trim(),
+                password.Trim()
+            );
+
+            // ==========================
+            // VALIDAR CREDENCIALES
+            // ==========================
+            if (resultado == null)
+            {
+                loginError = "Usuario o contraseña incorrectos.";
+                return;
+            }
+
+            // ==========================
+            // SESIÓN EXITOSA
+            // ==========================
             usuarioLogueado = resultado;
             isAuthenticated = true;
+            alertasVisuales.Insert(0, new AlertaUI
+            {
+                Titulo = "Inicio de sesión exitoso",
+                Mensaje = $"Bienvenido {usuarioLogueado.Nombre}. Rol detectado: {usuarioLogueado.Rol}",
+                Hora = "Ahora",
+                Color = "success",
+                Icono = "bi-person-check-fill"
+            });
 
+            // ==========================
+            // CARGAR DATOS DEL DASHBOARD
+            // ==========================
             await CargarZonas();
             await CargarLecturas();
 
-            // Interop de JS para pintar la gráfica de Chart.js
-            await Task.Delay(250);
+            // ==========================
+            // VALIDAR ROL
+            // ==========================
+            if (usuarioLogueado.Rol == "Admin")
+            {
+                alertasVisuales.Insert(0, new AlertaUI
+                {
+                    Titulo = "Administrador conectado",
+                    Mensaje = "Tienes permisos completos del sistema.",
+                    Hora = "Ahora",
+                    Color = "primary",
+                    Icono = "bi-person-badge-fill"
+                });
+            }
+            else
+            {
+                alertasVisuales.Insert(0, new AlertaUI
+                {
+                    Titulo = "Usuario conectado",
+                    Mensaje = "Acceso limitado a operaciones autorizadas.",
+                    Hora = "Ahora",
+                    Color = "success",
+                    Icono = "bi-person-check-fill"
+                });
+            }
+
+            // ==========================
+            // GRAFICA JS
+            // ==========================
+            await Task.Delay(300);
+
             await JSRuntime.InvokeVoidAsync("inicializarGraficas");
         }
-        else
+        catch (HttpRequestException)
         {
-            loginError = "Usuario o contraseña incorrectos.";
+            loginError = "No se pudo conectar con el servidor API.";
+        }
+        catch (TaskCanceledException)
+        {
+            loginError = "Tiempo de espera agotado con el servidor.";
+        }
+        catch (Exception ex)
+        {
+            loginError = $"Error inesperado: {ex.Message}";
         }
     }
 
@@ -293,22 +388,57 @@ else
 
     private async Task GuardarZona()
     {
-        if (string.IsNullOrEmpty(nuevaZona.Nombre)) return;
+        if (string.IsNullOrWhiteSpace(
+            nuevaZona.Nombre))
+        {
+            errorMessage =
+                "El nombre es obligatorio.";
+
+            return;
+        }
 
         try
         {
-            nuevaZona.AgricultorId = usuarioLogueado?.Id;
-            var exito = await ZonaService.CreateZonaAsync(nuevaZona);
+            bool exito;
+
+            nuevaZona.AgricultorId =
+                usuarioLogueado?.Id;
+
+            // CREATE
+            if (nuevaZona.Id == 0)
+            {
+                exito =
+                    await ZonaService
+                        .CreateZonaAsync(
+                            nuevaZona);
+            }
+            // UPDATE
+            else
+            {
+                exito =
+                    await ZonaService
+                        .UpdateZonaAsync(
+                            nuevaZona);
+            }
+
             if (exito)
             {
                 nuevaZona = new Zona();
+
                 mostrarFormularioZona = false;
+
                 await CargarZonas();
+            }
+            else
+            {
+                errorMessage =
+                    "No se pudo guardar.";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error al guardar zona: {ex.Message}";
+            errorMessage =
+                $"Error: {ex.Message}";
         }
     }
 

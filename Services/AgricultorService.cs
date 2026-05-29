@@ -1,6 +1,4 @@
-﻿using System.Net.Http;
-using System.Net.Http.Json;
-using System.Threading.Tasks;
+﻿using System.Net.Http.Json;
 using AgroTech.Models;
 
 namespace AgroTech.Services
@@ -14,29 +12,63 @@ namespace AgroTech.Services
             _http = http;
         }
 
-        public async Task<string?> RegistrarAsync(Agricultor agricultor)
+        // =========================================
+        // REGISTRO
+        // =========================================
+        public async Task<string?> RegistrarAsync(
+            Agricultor agricultor)
         {
-            var response = await _http.PostAsJsonAsync("api/agricultores/registro", agricultor);
+            try
+            {
+                var response =
+                    await _http.PostAsJsonAsync(
+                        "api/agricultores/registro",
+                        agricultor);
 
-            if (response.IsSuccessStatusCode)
-                return null; // Éxito completo
+                if (response.IsSuccessStatusCode)
+                    return null;
 
-            // Si da error 400, extrae el texto exacto enviado por la API
-            var mensajeError = await response.Content.ReadAsStringAsync();
-            return !string.IsNullOrEmpty(mensajeError) ? mensajeError : "Error desconocido en el registro.";
+                return await response.Content
+                    .ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
         }
 
-        public async Task<Agricultor?> LoginAsync(string usuario, string contraseña)
+        // =========================================
+        // LOGIN
+        // =========================================
+        public async Task<Agricultor?> LoginAsync(
+            string usuario,
+            string contraseña)
         {
-            var loginRequest = new { Usuario = usuario, Contrasena = contraseña };
-            var response = await _http.PostAsJsonAsync("api/agricultores/login", loginRequest);
-
-            if (response.IsSuccessStatusCode)
+            try
             {
-                return await response.Content.ReadFromJsonAsync<Agricultor>();
-            }
+                var loginRequest = new
+                {
+                    Usuario = usuario,
+                    Contrasena = contraseña
+                };
 
-            return null; // Credenciales inválidas (401)
+                var response =
+                    await _http.PostAsJsonAsync(
+                        "api/agricultores/login",
+                        loginRequest);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content
+                        .ReadFromJsonAsync<Agricultor>();
+                }
+
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }
