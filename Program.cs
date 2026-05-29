@@ -26,4 +26,6 @@ builder.Services.AddScoped<ZonaService>();
 
 builder.Services.AddScoped<LecturaService>();
 
+builder.Services.AddScoped<SensorService>();
+
 await builder.Build().RunAsync();

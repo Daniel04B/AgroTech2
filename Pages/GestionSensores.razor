@@ -3,6 +3,9 @@
 @using AgroTech.Services
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject SensorService SensorService
+@inject AgricultorService AgricultorService
+
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -139,6 +142,7 @@
     private Sensor sensorForm = new();
     private string? mensajeError;
     private bool esAdmin = true;
+    private Agricultor? usuarioLogueado;
 
     protected override async Task OnInitializedAsync()
     {
@@ -223,7 +227,23 @@
             }
         }
     }
+    private async Task ObtenerUsuarioActual()
+    {
+        try
+        {
+            // TEMPORAL
+            // mientras no usemos JWT
 
+            usuarioLogueado =
+                await AgricultorService.LoginAsync(
+                    "admin",
+                    "12345"
+                );
+        }
+        catch
+        {
+        }
+    }
     private void LimpiarFormulario() => sensorForm = new();
 
 }
